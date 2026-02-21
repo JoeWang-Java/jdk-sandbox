@@ -134,7 +134,27 @@ public class Utils {
      * @return {@code true} if the CharSequence is empty or null
      */
     public static boolean isEmpty(final CharSequence cs) {
-        return cs == null || cs.length() == 0;
+        return cs == null || cs.isEmpty();
+    }
+
+    /**
+     * Checks if a CharSequence is not null and empty ("").
+     * @param cs the CharSequence to check, may be null
+     * @return {@code true} if the CharSequence is not null and empty ("")
+     */
+    public static boolean isNotEmpty(final CharSequence cs) {
+        return cs != null && !cs.isEmpty();
+    }
+
+    /**
+     * Checks if a CharSequence is not null and empty (""), and also does not end
+     * with a wildcard (*).
+     * @param cs the CharSequence to check, may be null
+     * @return {@code true} if the CharSequence is not null and empty ("") and does
+     * not end with a wildcard
+     */
+    public static boolean isNotEmptyOrWildcard(final CharSequence cs) {
+        return cs != null && !cs.isEmpty() && (cs.charAt(cs.length() - 1) != '*');
     }
 
     /**

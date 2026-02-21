@@ -9,6 +9,9 @@ import org.testng.Assert;
 import java.net.URI;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 
 /*
  * @test
@@ -29,7 +32,7 @@ public class AccessRuleTest {
         return Stream.of(
             Arguments.of("*", "http://all.access", true),
             Arguments.of("", "http://no.access", false),
-            Arguments.of("http:*;http:/*;http://*", "http://all.http.access", true),
+            Arguments.of("http:*; http:/*; http://*", "http://all.http.access", true),
             Arguments.of("http://*.oracle.com", "http://subdomains.oracle.com/dtds/example.dtd", true),
             Arguments.of("https:*;https:/*;https://*", "https://all.https.access", true),
             Arguments.of("https://*.oracle.com", "https://subdomains.oracle.com/dtds/example.dtd", true),
@@ -40,10 +43,33 @@ public class AccessRuleTest {
             Arguments.of("file:/dtds/dtd1.dtd", "file:/dtds/dtd1.dtd", true),
             Arguments.of("file:/dtds/dtd1.dtd, file:/xsds/*", "file:/dtds/dtd1.dtd; file:/xsds/example.xsd", true),
             Arguments.of("http://www.oracle.com, file:/dtds/dtd1.dtd, file:/xsds/*",
-                "http://www.oracle.com/dtds/example.dtd; file:/dtds/dtd1.dtd; file:/xsds/example.xsd", true)
-
+                "http://www.oracle.com/dtds/example.dtd; file:/dtds/dtd1.dtd; file:/xsds/example.xsd", true),
+            Arguments.of("jrt:*; jrt:/java.xml/*", "jrt:/java.xml/jdk/xml/internal/jdkcatalog/JDKCatalog.xml", true),
+            Arguments.of("jar:file:/tmp/foo.jar; jar:file:/tmp/foo.jar!/dtds/*", "jar:file:/tmp/foo.jar!/dtds/example.dtd", true),
+            Arguments.of("jar:*; jar:file:*", "jar:file://all.file.access", true)
         );
     }
+
+    /**
+     * Returns test data for testInvalidRules.
+     * Data: rules, exception class
+     * @return test data for testInvalidRules
+     */
+    private static Stream<Arguments> testInvalidInput() {
+
+        return Stream.of(
+            Arguments.of("http://:8080", IllegalArgumentException.class),
+            Arguments.of("http:///dtds", IllegalArgumentException.class),
+            Arguments.of("scheme", IllegalArgumentException.class),
+            Arguments.of("http", IllegalArgumentException.class),
+            Arguments.of("http:", IllegalArgumentException.class),
+            Arguments.of("http://:8080", IllegalArgumentException.class),
+            Arguments.of("http:///dtds", IllegalArgumentException.class),
+            Arguments.of("http://example.com, , file:*", IllegalArgumentException.class),
+            Arguments.of("http://example.com, *, file:*", IllegalArgumentException.class)
+        );
+    }
+
     /**
      * Verifies that the Access External Properties are supported throughout the
      * JAXP APIs.
@@ -66,5 +92,30 @@ public class AccessRuleTest {
                 Assert.assertEquals(accessRule.allows(URI.create(systemId.trim())), permitted);
             }
         }
+    }
+
+    /**
+     * Verifies that the specified rule is invalid.
+     * @param rule indicates whether there is a custom resolver
+     * @param expectedType the expected throw type
+     * @throws Exception if the test fails other than the expected Exception, which
+     * would indicate an issue in configuring the test
+     */
+    @ParameterizedTest
+    @MethodSource("testInvalidInput")
+    public void testAccessRule(String rule, Class<Throwable> expectedType) throws Exception {
+            assertThrows(expectedType, () -> parseRules(rule));
+
+    }
+
+    /**
+     * Attempts to parse an access rule
+     * @param rule the access rule
+
+     * @throws Exception if the test fails due to test configuration issues other
+     * than the expected result
+     */
+    private void parseRules(String rule) {
+        AccessRule accessRule = new AccessRule(rule.trim());
     }
 }
